@@ -55,3 +55,4 @@ func Init() {
 	Db.MaxConnectionIdle, _ = strconv.Atoi(os.Getenv("DB_MAX_CONNECTION_IDLE"))
 	Db.Timezone = os.Getenv("DB_TIMEZONE")
 }
+
