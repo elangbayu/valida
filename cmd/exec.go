@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // execCmd represents the exec command
@@ -15,7 +16,17 @@ var execCmd = &cobra.Command{
 	Short: "Execute automatic test for given OpenAPI Spec .json file",
 	Long:  `Execute automatic test for given OpenAPI Spec .json file`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("exec called")
+		fileName, _ := cmd.Flags().GetString("file")
+		fmt.Printf("Executing %s\n\n", fileName)
+
+		viper.AddConfigPath(".")
+		viper.SetConfigType("json")
+		viper.SetConfigName(fileName)
+		viper.ReadInConfig()
+
+		fmt.Printf("API Title: %s\n", viper.GetString("info.title"))
+		fmt.Printf("API Version: %s\n", viper.GetString("info.version"))
+		fmt.Printf("API Description: %s\n", viper.GetString("info.description"))
 	},
 }
 
@@ -26,7 +37,7 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	execCmd.PersistentFlags().String("file", "", "Path to OpenAPI Spec .json file")
+	execCmd.PersistentFlags().String("file", "", "Path to OpenAPI Spec .json file. Omit the extension")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
