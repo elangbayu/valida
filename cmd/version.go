@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -15,6 +14,10 @@ var versionCmd = &cobra.Command{
 	Short: "Print the version number of Valida",
 	Long:  `All software has versions. This is Valida's`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Valida Automatic Test Execution - v1")
+		printVersion()
 	},
+}
+
+func printVersion() {
+	fmt.Println("Valida Automatic Test Execution - v1")
 }

@@ -17,16 +17,7 @@ var execCmd = &cobra.Command{
 	Long:  `Execute automatic test for given OpenAPI Spec .json file`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fileName, _ := cmd.Flags().GetString("file")
-		fmt.Printf("Executing %s\n\n", fileName)
-
-		viper.AddConfigPath(".")
-		viper.SetConfigType("json")
-		viper.SetConfigName(fileName)
-		viper.ReadInConfig()
-
-		fmt.Printf("API Title: %s\n", viper.GetString("info.title"))
-		fmt.Printf("API Version: %s\n", viper.GetString("info.version"))
-		fmt.Printf("API Description: %s\n", viper.GetString("info.description"))
+		printSpecDesc(fileName)
 	},
 }
 
@@ -44,4 +35,17 @@ func init() {
 	// execCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	execCmd.MarkPersistentFlagRequired("file")
+}
+
+func printSpecDesc(fileName string) {
+	fmt.Printf("Executing %s\n\n", fileName)
+
+	viper.AddConfigPath(".")
+	viper.SetConfigType("json")
+	viper.SetConfigName(fileName)
+	viper.ReadInConfig()
+
+	fmt.Printf("API Title: %s\n", viper.GetString("info.title"))
+	fmt.Printf("API Version: %s\n", viper.GetString("info.version"))
+	fmt.Printf("API Description: \n%s\n", viper.GetString("info.description"))
 }
