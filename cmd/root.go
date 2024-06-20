@@ -15,8 +15,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var cfgFile string
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "valida --test spec.json",
@@ -62,7 +60,7 @@ func init() {
 }
 
 type Server struct {
-    URL string `json:"url"`
+	URL string `json:"url"`
 }
 
 func testAPISpec(filePath string) error {
@@ -79,7 +77,6 @@ func testAPISpec(filePath string) error {
 	// fmt.Println("Server:", string(spec.Servers))
 	fmt.Println("Testing APIs... (this is a stub)")
 
-
 	data, err := json.MarshalIndent(spec.Paths, "", "  ")
 	if err != nil {
 		fmt.Println("error:", err)
@@ -88,12 +85,12 @@ func testAPISpec(filePath string) error {
 	// fmt.Println(string(data))
 
 	// Deklarasikan map untuk menampung hasil parsing JSON
-    var paths map[string]interface{}
+	var paths map[string]interface{}
 
-    // Parsing JSON
-    if err := json.Unmarshal([]byte(data), &paths); err != nil {
-        log.Fatalf("Error parsing JSON: %v", err)
-    }
+	// Parsing JSON
+	if err := json.Unmarshal([]byte(data), &paths); err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
 
 	dataServers, err := json.MarshalIndent(spec.Servers, "", "  ")
 	if err != nil {
@@ -104,32 +101,32 @@ func testAPISpec(filePath string) error {
 	// var server spec.Servers
 
 	// Unmarshal dataServers ke dalam struktur Go
-    var servers []Server
-    err = json.Unmarshal(dataServers, &servers)
-    if err != nil {
-        log.Fatalf("Error unmarshalling JSON: %v", err)
-    }
+	var servers []Server
+	err = json.Unmarshal(dataServers, &servers)
+	if err != nil {
+		log.Fatalf("Error unmarshalling JSON: %v", err)
+	}
 
-    // Ambil nilai dari parameter "url"
-    if len(servers) > 0 {
-        url := servers[0].URL
-        // fmt.Println("URL:", url)
+	// Ambil nilai dari parameter "url"
+	if len(servers) > 0 {
+		url := servers[0].URL
+		// fmt.Println("URL:", url)
 		// Iterasi melalui map dan cetak setiap key yang merupakan endpoint
 		for endpoint := range paths {
-					fmt.Println("Yang dites: ", url, endpoint)
-					resp, err := http.Get(url+endpoint)
-					if err != nil {
-						fmt.Println("Error: ", err)
-					}
-					defer resp.Body.Close()
-					body, err := io.ReadAll(resp.Body)
-					if err != nil {
-						fmt.Println("Error: ", err)
-					}
-					fmt.Println(string(body))
+			fmt.Println("Yang dites: ", url, endpoint)
+			resp, err := http.Get(url + endpoint)
+			if err != nil {
+				fmt.Println("Error: ", err)
+			}
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Println("Error: ", err)
+			}
+			fmt.Println(string(body))
 		}
-    } else {
-        fmt.Println("No servers found")
-    }
+	} else {
+		fmt.Println("No servers found")
+	}
 	return nil
 }
