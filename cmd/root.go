@@ -6,13 +6,13 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/spf13/cobra"
+	"strings"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -69,64 +69,106 @@ func testAPISpec(filePath string) error {
 		return err
 	}
 
-	// Implement the API testing logic here
 	fmt.Println("Successfully parsed OpenAPI Specification:")
 	fmt.Println("Title:", spec.Info.Title)
 	fmt.Println("Version:", spec.Info.Version)
-	// serve, _ := spec.Servers.BasePath();
-	// fmt.Println("Server:", string(spec.Servers))
 	fmt.Println("Testing APIs... (this is a stub)")
-
-	data, err := json.MarshalIndent(spec.Paths, "", "  ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	// fmt.Println(string(data))
-
-	// Deklarasikan map untuk menampung hasil parsing JSON
-	var paths map[string]interface{}
-
-	// Parsing JSON
-	if err := json.Unmarshal([]byte(data), &paths); err != nil {
-		log.Fatalf("Error parsing JSON: %v", err)
-	}
 
 	dataServers, err := json.MarshalIndent(spec.Servers, "", "  ")
 	if err != nil {
 		fmt.Println("error:", err)
 	}
 
-	// fmt.Println(string(dataServers))
-	// var server spec.Servers
-
-	// Unmarshal dataServers ke dalam struktur Go
 	var servers []Server
 	err = json.Unmarshal(dataServers, &servers)
 	if err != nil {
 		log.Fatalf("Error unmarshalling JSON: %v", err)
 	}
 
-	// Ambil nilai dari parameter "url"
-	if len(servers) > 0 {
-		url := servers[0].URL
-		// fmt.Println("URL:", url)
-		// Iterasi melalui map dan cetak setiap key yang merupakan endpoint
-		for endpoint := range paths {
-			fmt.Println("Yang dites: ", url, endpoint)
-			resp, err := http.Get(url + endpoint)
-			if err != nil {
-				fmt.Println("Error: ", err)
-			}
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				fmt.Println("Error: ", err)
-			}
-			fmt.Println(string(body))
-		}
-	} else {
+	if len(servers) == 0 {
 		fmt.Println("No servers found")
+		return nil
 	}
+
+	url := servers[0].URL
+	fmt.Println("URL Server: ", url)
+
+	data, err := json.MarshalIndent(spec.Paths, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	fmt.Println(string(data))
+
+	var paths map[string]interface{}
+	// Parsing JSON
+	if err := json.Unmarshal(data, &paths); err != nil {
+		log.Fatalf("Error parsing JSON: %v", err)
+	}
+
+	for key, val := range paths {
+		// key is an endpoint
+		fmt.Println(key)
+		endpoint := strings.Replace(key, "{resource}", "test", -1) // Example: Replace `{resource}` with `users`
+		endpoint = strings.Replace(endpoint, "{id}", "1", -1)      // Example: Replace `{id}` with `1`
+		switch v := val.(type) {
+		case map[string]interface{}:
+			for k := range v {
+				// k is a method
+				fullURL := url + endpoint
+				fmt.Println("Full URL : ", fullURL)
+				fmt.Println("Method : ", k)
+				var resp *http.Response
+				var err error
+				if k == "get" {
+					resp, err = http.Get(fullURL)
+				} else if k == "post" {
+					resp, err = http.Post(fullURL, "application/json", nil)
+				} else if k == "put" {
+					req, err := http.NewRequest(http.MethodPut, fullURL, nil)
+					if err == nil {
+						client := &http.Client{}
+						resp, err = client.Do(req)
+					}
+				} else if k == "patch" {
+					req, err := http.NewRequest(http.MethodPatch, fullURL, nil)
+					if err == nil {
+						client := &http.Client{}
+						resp, err = client.Do(req)
+					}
+				} else if k == "delete" {
+					req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
+					if err == nil {
+						client := &http.Client{}
+						resp, err = client.Do(req)
+					}
+				}
+
+				if err != nil {
+					fmt.Printf("Error: %v\n", err)
+					continue
+				}
+
+				body, errRes := io.ReadAll(resp.Body)
+				errBodyClose := resp.Body.Close()
+				if errBodyClose != nil {
+					return errBodyClose
+				}
+				if errRes != nil {
+					fmt.Printf("Error: %v\n", err)
+					continue
+				}
+
+				fmt.Println("Body : ", string(body))
+
+			}
+		case []interface{}:
+			for i, value := range v {
+				fmt.Printf("Index: %d, Value: %v\n", i, value)
+			}
+		default:
+			fmt.Println("Unknown type")
+		}
+	}
+
 	return nil
 }
