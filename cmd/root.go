@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"io"
 	"log"
@@ -186,9 +187,19 @@ func testAPISpec(filePath string) error {
 }
 
 func displayResultsAsTable(results []TestResult) {
-	fmt.Printf("| %-30s | %-6s | %-10s |\n", "Endpoint", "Method", "Status")
-	fmt.Println("|--------------------------------|--------|------------|")
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Endpoint", "Method", "Status"})
+	// Set header to bold
+	table.SetHeaderColor(
+		tablewriter.Colors{tablewriter.Bold},
+		tablewriter.Colors{tablewriter.Bold},
+		tablewriter.Colors{tablewriter.Bold},
+	)
+	table.SetRowLine(true)
+
 	for _, result := range results {
-		fmt.Printf("| %-30s | %-6s | %-10s |\n", result.Endpoint, result.Method, result.Status)
+		table.Append([]string{result.Endpoint, result.Method, result.Status})
 	}
+
+	table.Render()
 }
