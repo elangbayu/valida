@@ -18,7 +18,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "valida --test",
+	Use:   "valida --test spec.json",
 	Short: "Automatic API Testing Execution",
 	Long:  `Run API automation testing with your OpenAPI Spec .json file`,
 	// Uncomment the following line if your bare application
