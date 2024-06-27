@@ -17,7 +17,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "valida --test spec.json",
+	Use:   "valida --test",
 	Short: "Automatic API Testing Execution",
 	Long:  `Run API automation testing with your OpenAPI Spec .json file`,
 	// Uncomment the following line if your bare application
@@ -63,6 +63,12 @@ type Server struct {
 	URL string `json:"url"`
 }
 
+type TestResult struct {
+	Endpoint string
+	Method   string
+	Status   string
+}
+
 func testAPISpec(filePath string) error {
 	spec, err := openapi3.NewLoader().LoadFromFile(filePath)
 	if err != nil {
@@ -105,6 +111,8 @@ func testAPISpec(filePath string) error {
 		log.Fatalf("Error parsing JSON: %v", err)
 	}
 
+	var results []TestResult
+
 	for key, val := range paths {
 		// key is an endpoint
 		fmt.Println(key)
@@ -119,6 +127,8 @@ func testAPISpec(filePath string) error {
 				fmt.Println("Method : ", k)
 				var resp *http.Response
 				var err error
+				status := "PASSED ✅"
+
 				if k == "get" {
 					resp, err = http.Get(fullURL)
 				} else if k == "post" {
@@ -143,23 +153,24 @@ func testAPISpec(filePath string) error {
 					}
 				}
 
-				if err != nil {
-					fmt.Printf("Error: %v\n", err)
-					continue
+				if err != nil || resp.StatusCode >= 400 {
+					status = "FAILED 🔴"
 				}
 
-				body, errRes := io.ReadAll(resp.Body)
-				errBodyClose := resp.Body.Close()
-				if errBodyClose != nil {
-					return errBodyClose
-				}
-				if errRes != nil {
-					fmt.Printf("Error: %v\n", err)
-					continue
+				if resp != nil {
+					body, errRes := io.ReadAll(resp.Body)
+					errBodyClose := resp.Body.Close()
+					if errBodyClose != nil {
+						return errBodyClose
+					}
+					if errRes != nil {
+						status = "FAILED 🔴"
+					}
+
+					fmt.Println("Body : ", string(body))
 				}
 
-				fmt.Println("Body : ", string(body))
-
+				results = append(results, TestResult{Endpoint: endpoint, Method: strings.ToUpper(k), Status: status})
 			}
 		case []interface{}:
 			for i, value := range v {
@@ -170,5 +181,14 @@ func testAPISpec(filePath string) error {
 		}
 	}
 
+	displayResultsAsTable(results)
 	return nil
+}
+
+func displayResultsAsTable(results []TestResult) {
+	fmt.Printf("| %-30s | %-6s | %-10s |\n", "Endpoint", "Method", "Status")
+	fmt.Println("|--------------------------------|--------|------------|")
+	for _, result := range results {
+		fmt.Printf("| %-30s | %-6s | %-10s |\n", result.Endpoint, result.Method, result.Status)
+	}
 }
