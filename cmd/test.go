@@ -4,6 +4,7 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -35,11 +37,11 @@ var testCmd = &cobra.Command{
 	},
 }
 
-var File string
+var file string
 
 func init() {
 	rootCmd.AddCommand(testCmd)
-	testCmd.Flags().StringVarP(&File, "file", "f", "", "OpenAPI Spec")
+	testCmd.Flags().StringVarP(&file, "file", "f", "", "OpenAPI Spec")
 }
 
 type Server struct {
@@ -52,10 +54,26 @@ type TestResult struct {
 	Status   string
 }
 
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
+func makeRequest(ctx context.Context, method, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, method, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("making request: %w", err)
+	}
+	return resp, nil
+}
+
 func testAPISpec(filePath string) error {
 	spec, err := openapi3.NewLoader().LoadFromFile(filePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("loading OpenAPI spec: %w", err)
 	}
 
 	fmt.Println("Successfully parsed OpenAPI Specification:")
@@ -71,12 +89,11 @@ func testAPISpec(filePath string) error {
 	var servers []Server
 	err = json.Unmarshal(dataServers, &servers)
 	if err != nil {
-		log.Fatalf("Error unmarshalling JSON: %v", err)
+		return fmt.Errorf("unmarshalling servers: %w", err)
 	}
 
 	if len(servers) == 0 {
-		fmt.Println("No servers found")
-		return nil
+		return fmt.Errorf("no servers found in the specification")
 	}
 
 	url := servers[0].URL
@@ -112,28 +129,31 @@ func testAPISpec(filePath string) error {
 				var err error
 				status := "PASSED"
 
+				ctx := context.Background()
+
 				if k == "get" {
-					resp, err = http.Get(fullURL)
+					// resp, err := http.Get(fullURL)
+					resp, err = makeRequest(ctx, http.MethodGet, fullURL)
 				} else if k == "post" {
-					resp, err = http.Post(fullURL, "application/json", nil)
+					resp, err = makeRequest(ctx, http.MethodPost, fullURL)
 				} else if k == "put" {
-					req, err := http.NewRequest(http.MethodPut, fullURL, nil)
-					if err == nil {
-						client := &http.Client{}
-						resp, err = client.Do(req)
-					}
+					resp, err = makeRequest(ctx, http.MethodPut, fullURL)
+					// if err == nil {
+					// 	client := &http.Client{}
+					// 	resp, err = client.Do(req)
+					// }
 				} else if k == "patch" {
-					req, err := http.NewRequest(http.MethodPatch, fullURL, nil)
-					if err == nil {
-						client := &http.Client{}
-						resp, err = client.Do(req)
-					}
+					resp, err = makeRequest(ctx, http.MethodPatch, fullURL)
+					// if err == nil {
+					// 	client := &http.Client{}
+					// 	resp, err = client.Do(req)
+					// }
 				} else if k == "delete" {
-					req, err := http.NewRequest(http.MethodDelete, fullURL, nil)
-					if err == nil {
-						client := &http.Client{}
-						resp, err = client.Do(req)
-					}
+					resp, err = makeRequest(ctx, http.MethodDelete, fullURL)
+					// if err == nil {
+					// 	client := &http.Client{}
+					// 	resp, err = client.Do(req)
+					// }
 				}
 
 				if err != nil || resp.StatusCode >= 400 {
@@ -142,10 +162,11 @@ func testAPISpec(filePath string) error {
 
 				if resp != nil {
 					body, errRes := io.ReadAll(resp.Body)
-					errBodyClose := resp.Body.Close()
-					if errBodyClose != nil {
-						return errBodyClose
-					}
+					// errBodyClose := resp.Body.Close()
+					// if errBodyClose != nil {
+					// 	return errBodyClose
+					// }
+					defer resp.Body.Close()
 					if errRes != nil {
 						status = "FAILED"
 					}
