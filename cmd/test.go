@@ -6,14 +6,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/olekukonko/tablewriter"
-	"github.com/spf13/cobra"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
+	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/spf13/cobra"
 )
 
 // testCmd represents the test command
@@ -108,7 +110,7 @@ func testAPISpec(filePath string) error {
 				fmt.Println("Method : ", k)
 				var resp *http.Response
 				var err error
-				status := "PASSED ✅"
+				status := "PASSED"
 
 				if k == "get" {
 					resp, err = http.Get(fullURL)
@@ -135,7 +137,7 @@ func testAPISpec(filePath string) error {
 				}
 
 				if err != nil || resp.StatusCode >= 400 {
-					status = "FAILED 🔴"
+					status = "FAILED"
 				}
 
 				if resp != nil {
@@ -145,7 +147,7 @@ func testAPISpec(filePath string) error {
 						return errBodyClose
 					}
 					if errRes != nil {
-						status = "FAILED 🔴"
+						status = "FAILED"
 					}
 
 					fmt.Println("Body : ", string(body))
@@ -167,19 +169,47 @@ func testAPISpec(filePath string) error {
 }
 
 func displayResultsAsTable(results []TestResult) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Endpoint", "Method", "Status"})
-	// Set header to bold
-	table.SetHeaderColor(
-		tablewriter.Colors{tablewriter.Bold},
-		tablewriter.Colors{tablewriter.Bold},
-		tablewriter.Colors{tablewriter.Bold},
+	const (
+		green = lipgloss.Color("#009900")
+		red   = lipgloss.Color("#f61901")
 	)
-	table.SetRowLine(true)
 
+	re := lipgloss.NewRenderer(os.Stdout)
+
+	var (
+		HeaderStyle       = re.NewStyle().Foreground(green).Bold(true).Align(lipgloss.Center)
+		CellStyle         = re.NewStyle().Padding(0, 1).Width(14)
+		PassedStatusStyle = re.NewStyle().Foreground(green).Width(14)
+		FailedStatusStyle = re.NewStyle().Foreground(red).Width(14)
+		BorderStyle       = lipgloss.NewStyle().Foreground(green)
+	)
+
+	t := table.New().
+		Border(lipgloss.ThickBorder()).
+		BorderStyle(BorderStyle).
+		Headers("ENDPOINT", "METHOD", "STATUS").
+		StyleFunc(func(row, col int) lipgloss.Style {
+			if row == 0 {
+				return HeaderStyle
+			}
+
+			// Apply styles for the status column
+			if col == 2 { // The status column is the third column (index 2)
+				switch results[row-1].Status {
+				case "PASSED":
+					return PassedStatusStyle
+				case "FAILED":
+					return FailedStatusStyle
+				}
+			}
+
+			return CellStyle
+		})
+
+	// Iterate over the testResults slice and convert each TestResult to a slice of strings
 	for _, result := range results {
-		table.Append([]string{result.Endpoint, result.Method, result.Status})
+		t.Row(result.Endpoint, result.Method, result.Status)
 	}
 
-	table.Render()
+	fmt.Println(t)
 }
