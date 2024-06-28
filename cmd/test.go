@@ -131,29 +131,17 @@ func testAPISpec(filePath string) error {
 
 				ctx := context.Background()
 
+        // TODO: change to switch case
 				if k == "get" {
-					// resp, err := http.Get(fullURL)
 					resp, err = makeRequest(ctx, http.MethodGet, fullURL)
 				} else if k == "post" {
 					resp, err = makeRequest(ctx, http.MethodPost, fullURL)
 				} else if k == "put" {
 					resp, err = makeRequest(ctx, http.MethodPut, fullURL)
-					// if err == nil {
-					// 	client := &http.Client{}
-					// 	resp, err = client.Do(req)
-					// }
 				} else if k == "patch" {
 					resp, err = makeRequest(ctx, http.MethodPatch, fullURL)
-					// if err == nil {
-					// 	client := &http.Client{}
-					// 	resp, err = client.Do(req)
-					// }
 				} else if k == "delete" {
 					resp, err = makeRequest(ctx, http.MethodDelete, fullURL)
-					// if err == nil {
-					// 	client := &http.Client{}
-					// 	resp, err = client.Do(req)
-					// }
 				}
 
 				if err != nil || resp.StatusCode >= 400 {
@@ -162,10 +150,6 @@ func testAPISpec(filePath string) error {
 
 				if resp != nil {
 					body, errRes := io.ReadAll(resp.Body)
-					// errBodyClose := resp.Body.Close()
-					// if errBodyClose != nil {
-					// 	return errBodyClose
-					// }
 					defer resp.Body.Close()
 					if errRes != nil {
 						status = "FAILED"
