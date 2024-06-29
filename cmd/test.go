@@ -131,17 +131,19 @@ func testAPISpec(filePath string) error {
 
 				ctx := context.Background()
 
-        // TODO: change to switch case
-				if k == "get" {
+				switch k {
+				case "get":
 					resp, err = makeRequest(ctx, http.MethodGet, fullURL)
-				} else if k == "post" {
+				case "post":
 					resp, err = makeRequest(ctx, http.MethodPost, fullURL)
-				} else if k == "put" {
+				case "put":
 					resp, err = makeRequest(ctx, http.MethodPut, fullURL)
-				} else if k == "patch" {
-					resp, err = makeRequest(ctx, http.MethodPatch, fullURL)
-				} else if k == "delete" {
+				case "delete":
 					resp, err = makeRequest(ctx, http.MethodDelete, fullURL)
+				case "patch":
+					resp, err = makeRequest(ctx, http.MethodPatch, fullURL)
+				default:
+					return fmt.Errorf("unsupported http method")
 				}
 
 				if err != nil || resp.StatusCode >= 400 {
