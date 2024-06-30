@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -244,10 +245,20 @@ func displayResultsAsTable(results []TestResult) {
 		}
 	}
 
-	// Add rows for total passed and failed endpoints
-	t.Row("", "", "") // Empty row for spacing
-	t.Row("PASSED", fmt.Sprintf("%d", passedCount), "")
-	t.Row("FAILED", fmt.Sprintf("%d", failedCount), "")
+	var passedCountStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(green)).
+		MarginTop(1).
+		Width(22)
+
+	var failedCountStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(red)).
+		MarginTop(1).
+		Width(22)
 
 	fmt.Println(t)
+
+	fmt.Println(passedCountStyle.Render("PASSED: " + strconv.Itoa(passedCount)))
+	fmt.Println(failedCountStyle.Render("FAILED: " + strconv.Itoa(failedCount)))
 }
