@@ -11,6 +11,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,6 +76,12 @@ func testAPISpec(filePath string) error {
 	spec, err := openapi3.NewLoader().LoadFromFile(filePath)
 	if err != nil {
 		return fmt.Errorf("loading OpenAPI spec: %w", err)
+	}
+
+	// Validate File OpenApi Specification
+	loader := openapi3.NewLoader()
+	if err := spec.Validate(loader.Context); err != nil {
+		log.Fatalf("Error validating OpenAPI spec: %v", err)
 	}
 
 	fmt.Println("Successfully parsed OpenAPI Specification:")
@@ -171,6 +179,14 @@ func testAPISpec(filePath string) error {
 		}
 	}
 
+	// Sort results by Endpoint and Method
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Endpoint == results[j].Endpoint {
+			return results[i].Method < results[j].Method
+		}
+		return results[i].Endpoint < results[j].Endpoint
+	})
+
 	displayResultsAsTable(results)
 	return nil
 }
@@ -200,23 +216,49 @@ func displayResultsAsTable(results []TestResult) {
 				return HeaderStyle
 			}
 
-			// Apply styles for the status column
-			if col == 2 { // The status column is the third column (index 2)
-				switch results[row-1].Status {
-				case "PASSED":
-					return PassedStatusStyle
-				case "FAILED":
-					return FailedStatusStyle
+			// Check if the row is within the range of results
+			if row-1 < len(results) {
+				// Apply styles for the status column
+				if col == 2 { // The status column is the third column (index 2)
+					switch results[row-1].Status {
+					case "PASSED":
+						return PassedStatusStyle
+					case "FAILED":
+						return FailedStatusStyle
+					}
 				}
 			}
 
 			return CellStyle
 		})
 
+	// Counters for passed and failed statuses
+	var passedCount, failedCount int
+
 	// Iterate over the testResults slice and convert each TestResult to a slice of strings
 	for _, result := range results {
 		t.Row(result.Endpoint, result.Method, result.Status)
+		if result.Status == "PASSED" {
+			passedCount++
+		} else if result.Status == "FAILED" {
+			failedCount++
+		}
 	}
 
+	var passedCountStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(green)).
+		MarginTop(1).
+		Width(22)
+
+	var failedCountStyle = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color(red)).
+		MarginTop(1).
+		Width(22)
+
 	fmt.Println(t)
+
+	fmt.Println(passedCountStyle.Render("PASSED: " + strconv.Itoa(passedCount)))
+	fmt.Println(failedCountStyle.Render("FAILED: " + strconv.Itoa(failedCount)))
 }
