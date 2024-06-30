@@ -246,8 +246,8 @@ func displayResultsAsTable(results []TestResult) {
 
 	// Add rows for total passed and failed endpoints
 	t.Row("", "", "") // Empty row for spacing
-	t.Row("TOTAL PASSED", fmt.Sprintf("%d", passedCount), "")
-	t.Row("TOTAL FAILED", fmt.Sprintf("%d", failedCount), "")
+	t.Row("PASSED", fmt.Sprintf("%d", passedCount), "")
+	t.Row("FAILED", fmt.Sprintf("%d", failedCount), "")
 
 	fmt.Println(t)
 }
