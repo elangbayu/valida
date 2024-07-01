@@ -190,18 +190,20 @@ func testAPISpec(filePath string) error {
 
 func displayResultsAsTable(results []TestResult) {
 	const (
-		green = lipgloss.Color("#009900")
-		red   = lipgloss.Color("#f61901")
+		green       = lipgloss.Color("#009900")
+		red         = lipgloss.Color("#f61901")
+		mutedGreen  = lipgloss.Color("#729762")
+		brightGreen = lipgloss.Color("#E7F0DC")
 	)
 
 	re := lipgloss.NewRenderer(os.Stdout)
 
 	var (
-		HeaderStyle       = re.NewStyle().Foreground(green).Bold(true).Align(lipgloss.Center)
+		HeaderStyle       = re.NewStyle().Foreground(brightGreen).Bold(true).Align(lipgloss.Center)
 		CellStyle         = re.NewStyle().Padding(0, 1).Width(14)
 		PassedStatusStyle = re.NewStyle().Foreground(green).Width(14)
 		FailedStatusStyle = re.NewStyle().Foreground(red).Width(14)
-		BorderStyle       = lipgloss.NewStyle().Foreground(green)
+		BorderStyle       = lipgloss.NewStyle().Foreground(mutedGreen)
 	)
 
 	t := table.New().
