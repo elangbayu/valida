@@ -81,10 +81,8 @@ func testAPISpec(filePath string) error {
 		log.Fatalf("Error validating OpenAPI spec: %v", err)
 	}
 
-	fmt.Println("Successfully parsed OpenAPI Specification:")
 	fmt.Println("Title:", spec.Info.Title)
 	fmt.Println("Version:", spec.Info.Version)
-	fmt.Println("Testing APIs... (this is a stub)")
 
 	dataServers, err := json.MarshalIndent(spec.Servers, "", "  ")
 	if err != nil {
@@ -102,13 +100,11 @@ func testAPISpec(filePath string) error {
 	}
 
 	url := servers[0].URL
-	fmt.Println("URL Server: ", url)
 
 	data, err := json.MarshalIndent(spec.Paths, "", "  ")
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-	fmt.Println(string(data))
 
 	var paths map[string]interface{}
 	// Parsing JSON
@@ -120,7 +116,6 @@ func testAPISpec(filePath string) error {
 
 	for key, val := range paths {
 		// key is an endpoint
-		fmt.Println(key)
 		endpoint := strings.Replace(key, "{resource}", "test", -1) // Example: Replace `{resource}` with `users`
 		endpoint = strings.Replace(endpoint, "{id}", "1", -1)      // Example: Replace `{id}` with `1`
 		switch v := val.(type) {
@@ -128,8 +123,6 @@ func testAPISpec(filePath string) error {
 			for k := range v {
 				// k is a method
 				fullURL := url + endpoint
-				fmt.Println("Full URL : ", fullURL)
-				fmt.Println("Method : ", k)
 				var resp *http.Response
 				var err error
 				status := "PASSED"
@@ -156,13 +149,11 @@ func testAPISpec(filePath string) error {
 				}
 
 				if resp != nil {
-					body, errRes := io.ReadAll(resp.Body)
+					_, errRes := io.ReadAll(resp.Body)
 					defer resp.Body.Close()
 					if errRes != nil {
 						status = "FAILED"
 					}
-
-					fmt.Println("Body : ", string(body))
 				}
 
 				results = append(results, TestResult{Endpoint: endpoint, Method: strings.ToUpper(k), Status: status})
