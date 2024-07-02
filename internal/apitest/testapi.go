@@ -2,11 +2,11 @@ package apitest
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"sort"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -64,34 +64,58 @@ func getServerURL(spec *openapi3.T) (string, error) {
 	return spec.Servers[0].URL, nil
 }
 
-func getPathsFromSpec(spec *openapi3.T) (map[string]interface{}, error) {
-	data, err := json.MarshalIndent(spec.Paths, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshalling paths: %w", err)
-	}
+func getPathsFromSpec(spec *openapi3.T) (map[string]map[string]EndpointInfo, error) {
+	paths := make(map[string]map[string]EndpointInfo)
 
-	var paths map[string]interface{}
-	if err := json.Unmarshal(data, &paths); err != nil {
-		return nil, fmt.Errorf("unmarshalling paths: %w", err)
+	for path, pathItem := range spec.Paths.Map() {
+		endpoints := make(map[string]EndpointInfo)
+
+		operations := map[string]*openapi3.Operation{
+			"GET":    pathItem.Get,
+			"POST":   pathItem.Post,
+			"PUT":    pathItem.Put,
+			"DELETE": pathItem.Delete,
+			"PATCH":  pathItem.Patch,
+		}
+
+		for method, operation := range operations {
+			if operation != nil {
+				var requestBody *openapi3.RequestBody
+				if operation.RequestBody != nil {
+					requestBody = operation.RequestBody.Value
+				}
+				parameters := dereferenceParams(append(pathItem.Parameters, operation.Parameters...))
+				endpointInfo := EndpointInfo{
+					Method:      method,
+					Parameters:  parameters,
+					RequestBody: requestBody,
+				}
+				endpoints[method] = endpointInfo
+			}
+		}
+
+		paths[path] = endpoints
 	}
 
 	return paths, nil
 }
 
-func testPaths(url string, paths map[string]interface{}) ([]TestResult, error) {
+func dereferenceParams(params openapi3.Parameters) []*openapi3.Parameter {
+	result := make([]*openapi3.Parameter, 0, len(params))
+	for _, param := range params {
+		if param != nil {
+			result = append(result, param.Value)
+		}
+	}
+	return result
+}
+
+func testPaths(url string, paths map[string]map[string]EndpointInfo) ([]TestResult, error) {
 	var results []TestResult
 
-	for endpoint, val := range paths {
-		endpoint = strings.Replace(endpoint, "{resource}", "test", -1)
-		endpoint = strings.Replace(endpoint, "{id}", "1", -1)
-
-		methods, ok := val.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		for method := range methods {
-			result, err := testEndpoint(url, endpoint, method)
+	for path, methods := range paths {
+		for method, info := range methods {
+			result, err := testEndpoint(url, path, method, info)
 			if err != nil {
 				return nil, err
 			}
@@ -99,34 +123,70 @@ func testPaths(url string, paths map[string]interface{}) ([]TestResult, error) {
 		}
 	}
 
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Endpoint == results[j].Endpoint {
-			return results[i].Method < results[j].Method
-		}
-		return results[i].Endpoint < results[j].Endpoint
-	})
-
 	return results, nil
 }
 
-func testEndpoint(url, endpoint, method string) (TestResult, error) {
-	fullURL := url + endpoint
-	ctx := context.Background()
-
-	resp, err := makeRequest(ctx, strings.ToUpper(method), fullURL)
-	status := "PASSED"
-
-	if err != nil || resp.StatusCode >= 400 {
-		status = "FAILED"
+func testEndpoint(baseURL, path, method string, info EndpointInfo) (TestResult, error) {
+	fullURL := baseURL + path
+	req, err := constructRequest(method, fullURL, info)
+	if err != nil {
+			return TestResult{}, err
 	}
 
-	if resp != nil {
-		_, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			status = "FAILED"
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := makeRequest(ctx, req.Method, req.URL.String())
+	if err != nil {
+			return TestResult{}, err
+	}
+	defer resp.Body.Close()
+
+	// Log the network interaction
+	err = LogNetworkInteraction(req, resp)
+	if err != nil {
+			fmt.Printf("Error logging network interaction: %v\n", err)
+	}
+
+	return TestResult{
+			Endpoint: path,
+			Method:   method,
+			Status:   resp.Status,
+	}, nil
+}
+
+func constructRequest(method, url string, info EndpointInfo) (*http.Request, error) {
+	var body io.Reader
+	if info.RequestBody != nil {
+		// Here you would generate a valid request body based on the schema
+		// For now, we'll just use an empty body
+		body = strings.NewReader("{}")
+	}
+
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add query parameters
+	q := req.URL.Query()
+	for _, param := range info.Parameters {
+		if param.In == "query" {
+			// Here you would generate a valid value based on the parameter schema
+			// For now, we'll just use a placeholder value
+			q.Add(param.Name, "test_value")
+		}
+	}
+	req.URL.RawQuery = q.Encode()
+
+	// Add headers
+	for _, param := range info.Parameters {
+		if param.In == "header" {
+			// Here you would generate a valid value based on the parameter schema
+			// For now, we'll just use a placeholder value
+			req.Header.Add(param.Name, "test_value")
 		}
 	}
 
-	return TestResult{Endpoint: endpoint, Method: strings.ToUpper(method), Status: status}, nil
+	return req, nil
 }
