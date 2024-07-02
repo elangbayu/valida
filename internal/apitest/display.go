@@ -3,6 +3,7 @@ package apitest
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 
 	"github.com/charmbracelet/lipgloss"
@@ -26,6 +27,14 @@ func displayResultsAsTable(results []TestResult) {
 		FailedStatusStyle = re.NewStyle().Foreground(red).Width(14)
 		BorderStyle       = lipgloss.NewStyle().Foreground(mutedGreen)
 	)
+
+	// Sort the results
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].Endpoint == results[j].Endpoint {
+			return results[i].Method < results[j].Method
+		}
+		return results[i].Endpoint < results[j].Endpoint
+	})
 
 	t := table.New().
 		Border(lipgloss.ThickBorder()).
