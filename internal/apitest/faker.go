@@ -9,3 +9,7 @@ func FakeString() string {
 func FakeInt() int {
 	return gofakeit.Number(1, 99999)
 }
+
+func FakeEmail() string {
+	return gofakeit.Email()
+}

@@ -2,7 +2,6 @@ package apitest
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -27,7 +26,7 @@ func processPaths(apiSpec *APISpec) error {
 
 	for path, pathMap := range paths {
 		pathItem := &PathItem{
-			Path:       replaceDynamicPlaceholders(path),
+			Path:       path,
 			Operations: make(map[string]*Operation),
 		}
 
@@ -46,15 +45,6 @@ func processPaths(apiSpec *APISpec) error {
 	}
 
 	return nil
-}
-
-// replaceDynamicPlaceholders replaces placeholders enclosed in curly braces with random strings.
-func replaceDynamicPlaceholders(path string) string {
-	re := regexp.MustCompile(`{[^{}]*}`) // Regular expression to find words within curly braces
-	return re.ReplaceAllStringFunc(path, func(match string) string {
-		// Generate a random string of length 10 for each match (this length can be adjusted)
-		return FakeString()
-	})
 }
 
 func processOperations(pathItem *PathItem, pathMaps map[string]interface{}) error {

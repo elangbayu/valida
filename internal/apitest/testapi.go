@@ -19,6 +19,12 @@ func TestAPISpec(filePath string) (*APISpec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error validating OpenAPI spec: %w", err)
 	}
+	fmt.Println("TEST 1 : ", spec.Paths.Find("/login").Post.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties)
+	propMaps := spec.Paths.Find("/login").Post.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
+	for ke, propMap := range propMaps {
+		fmt.Println("TEST 4 : ", ke, propMap.Value.Type)
+		// fmt.Printf("TEST 3 : %s %+v\n", ke, propMap.Value)
+	}
 
 	if err := loadConfig(filePath); err != nil {
 		return nil, fmt.Errorf("error reading OpenAPI spec: %w", err)

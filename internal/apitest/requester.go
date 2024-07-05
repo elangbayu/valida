@@ -2,10 +2,14 @@ package apitest
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/getkin/kin-openapi/openapi3"
 	"io"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"regexp"
 	"strings"
 )
 
@@ -23,8 +27,43 @@ func MakeRequest(apiSpec *APISpec) {
 			var jsonReader io.Reader
 			if operation.RequestBody != nil {
 				// tambahkan request body ke request
-				jsonBody := []byte(`{"email": "elang@mail.com", "password": "password"}`)
-				jsonReader = bytes.NewReader(jsonBody)
+				// jsonBody := []byte(`{"email": "elang@mail.com", "password": "password"}`)
+				// Dynamic
+				reqBody := make(map[string]interface{})
+
+				var mapss openapi3.Schemas
+				switch strings.ToUpper(operation.Method) {
+				case "GET":
+					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Get.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
+				case "POST":
+					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Post.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
+				case "PUT":
+					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Put.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
+				case "DELETE":
+					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Delete.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
+				case "PATCH":
+					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Patch.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
+				}
+
+				for k, v := range mapss {
+					pattern := `\b(?:e[-]?mail|mail)\b`
+					re := regexp.MustCompile(pattern)
+					matches := re.FindAllString(k, -1)
+					switch v.Value.Type.Slice()[0] {
+					case "string":
+						if len(matches) > 0 {
+							reqBody[k] = FakeEmail()
+						} else {
+							reqBody[k] = FakeString()
+						}
+					case "int":
+						reqBody[k] = FakeInt()
+					}
+				}
+
+				b, _ := json.Marshal(reqBody)
+
+				jsonReader = bytes.NewReader(b)
 			}
 
 			// http request ke URL: apiSpec.BaseURL + pathItem.Path, methodnya pake operation.Method
@@ -51,11 +90,11 @@ func MakeRequest(apiSpec *APISpec) {
 			}
 
 			// Mencetak request sebelum mengirimkannya
-			// requestDump, err := httputil.DumpRequest(req, true)
-			// if err != nil {
-			// 	log.Fatalf("Error dumping request: %v", err)
-			// }
-			// fmt.Println("Request: ", string(requestDump))
+			requestDump, err := httputil.DumpRequest(req, true)
+			if err != nil {
+				log.Fatalf("Error dumping request: %v", err)
+			}
+			fmt.Println("MAKE Request: ", string(requestDump))
 
 			// Do Req
 			request(req)
@@ -85,6 +124,15 @@ func request(req *http.Request) {
 
 	fmt.Println("Response Status:", resp.Status)
 	fmt.Println("Response Body:", string(body))
+}
+
+// replaceDynamicPlaceholders replaces placeholders enclosed in curly braces with random strings.
+func replaceDynamicPlaceholders(path string) string {
+	re := regexp.MustCompile(`{[^{}]*}`) // Regular expression to find words within curly braces
+	return re.ReplaceAllStringFunc(path, func(match string) string {
+		// Generate a random string of length 10 for each match (this length can be adjusted)
+		return FakeString()
+	})
 }
 
 // func printParameters(parameters []map[string]interface{}) {
