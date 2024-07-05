@@ -2,7 +2,10 @@ module valida
 
 go 1.22.0
 
-require github.com/spf13/cobra v1.8.0
+require (
+	github.com/brianvoe/gofakeit/v7 v7.0.4
+	github.com/spf13/cobra v1.8.0
+)
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect

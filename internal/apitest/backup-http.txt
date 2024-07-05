@@ -1,0 +1,45 @@
+package apitest
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"time"
+)
+
+var httpClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
+func makeRequest(ctx context.Context, method, url string, req *http.Request) (*http.Response, error) {
+
+	// reqBody := make(map[string]interface{})
+	// reqBody["email"] = fakeEmail()
+	// reqBody["username"] = fakeString()
+	// reqBody["password"] = fakeString()
+	//
+	// // Mengonversi reqBody menjadi JSON
+	// reqBodyJSON, err := json.Marshal(reqBody)
+	// if err != nil {
+	// 	log.Fatalf("Error marshalling reqBody to JSON: %v", err)
+	// }
+	//
+	// // Mencetak request body
+	// fmt.Printf("Request Body: %s\n", reqBodyJSON)
+	//
+	// // Membuat io.Reader dari JSON
+	// body := bytes.NewReader(reqBodyJSON)
+	//
+	// req, err := http.NewRequestWithContext(ctx, method, url, body)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("creating request: %w", err)
+	// }
+	//
+	// req.Header.Set("Content-Type", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("making request: %w", err)
+	}
+	return resp, nil
+}
