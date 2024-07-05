@@ -28,7 +28,8 @@ var testCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		apitest.PrintAPISpec(apiSpec)
+		apitest.MakeRequest(apiSpec)
+		// apitest.PrintAPISpec(apiSpec)
 	},
 }
 

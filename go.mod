@@ -3,6 +3,7 @@ module valida
 go 1.22.0
 
 require (
+	github.com/brianvoe/gofakeit/v7 v7.0.4
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
 )

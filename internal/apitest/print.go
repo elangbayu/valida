@@ -12,6 +12,7 @@ func PrintAPISpec(apiSpec *APISpec) {
 		fmt.Printf("Path: %s\n", pathItem.Path)
 		for _, operation := range pathItem.Operations {
 			fmt.Printf("  Method: %s\n", operation.Method)
+			// http request ke URL: apiSpec.BaseURL + pathItem.Path, methodnya pake operation.Method
 			printParameters(operation.Parameters)
 			printRequestBody(operation.RequestBody)
 			printResponses(operation.Responses)
