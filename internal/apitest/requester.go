@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -66,35 +67,56 @@ func MakeRequest(apiSpec *APISpec) {
 				jsonReader = bytes.NewReader(b)
 			}
 
-			// http request ke URL: apiSpec.BaseURL + pathItem.Path, methodnya pake operation.Method
 			req, err := http.NewRequest(strings.ToUpper(operation.Method), apiSpec.BaseURL+pathItem.Path, jsonReader)
 			if err != nil {
 				log.Fatalf("Error making request: %v", err)
 			}
 			req.Header.Add("Content-Type", "application/json")
-			fmt.Println("Req Method", operation.Method)
 			fmt.Println("Req ", apiSpec.BaseURL+pathItem.Path)
 
 			if operation.Parameters != nil {
 				fmt.Println("Operations Parameters: ", operation.Parameters)
 				q := req.URL.Query()
-				for key, param := range operation.Parameters {
-					fmt.Println("Key Param: ", key, param)
-					// if param.In == "query" {
-					// 	// Here you would generate a valid value based on the parameter schema
-					// 	// For now, we'll just use a placeholder value
-					// 	q.Add(param.Name, "test_value")
-					// }
+				for _, param := range operation.Parameters {
+					fmt.Println("Param: ", param)
+					// Get Value "in"
+					if inValue, ok := param["in"]; ok {
+						fmt.Println("In: ", inValue)
+						schema := param["schema"].(map[string]interface{})
+						typeValue, _ := schema["type"]
+
+						getValue := func(typeValue interface{}) string {
+							if typeValue == "string" {
+								return FakeString()
+							} else if typeValue == "integer" {
+								return strconv.Itoa(FakeInt())
+							}
+							return ""
+						}
+
+						value := getValue(typeValue)
+						paramName := param["name"].(string)
+
+						switch inValue {
+						case "query":
+							fmt.Println("Value Param: ", value)
+							q.Add(paramName, value)
+						case "header":
+							fmt.Println("Value Header: ", value)
+							req.Header.Add(paramName, value)
+						}
+					}
 				}
 				req.URL.RawQuery = q.Encode()
 			}
 
-			// Mencetak request sebelum mengirimkannya
+			// Print Request
 			requestDump, err := httputil.DumpRequest(req, true)
 			if err != nil {
 				log.Fatalf("Error dumping request: %v", err)
 			}
 			fmt.Println("MAKE Request: ", string(requestDump))
+			fmt.Println("-------------------------")
 
 			// Do Req
 			request(req)
