@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/getkin/kin-openapi/openapi3"
 	"io"
-	"log"
 	"net/http"
-	"net/http/httputil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,75 +14,58 @@ import (
 var client = &http.Client{}
 
 func MakeRequest(apiSpec *APISpec) {
-	fmt.Printf("Base URL: %s\n\n", apiSpec.BaseURL)
+	fmt.Printf("Base URL: %s\n", apiSpec.BaseURL)
 
 	for _, pathItem := range apiSpec.Paths {
-		fmt.Printf("Path: %s\n", pathItem.Path)
 		for _, operation := range pathItem.Operations {
-			fmt.Printf("  Method: %s\n", operation.Method)
-			fmt.Printf("  Req Body: %s\n", operation.RequestBody)
+			PrintEndpointInfo(apiSpec.BaseURL, pathItem.Path, operation.Method)
 
 			var jsonReader io.Reader
 			if operation.RequestBody != nil {
-				// tambahkan request body ke request
-				// jsonBody := []byte(`{"email": "elang@mail.com", "password": "password"}`)
-				// Dynamic
 				reqBody := make(map[string]interface{})
 
-				var mapss openapi3.Schemas
-				switch strings.ToUpper(operation.Method) {
-				case "GET":
-					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Get.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
-				case "POST":
-					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Post.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
-				case "PUT":
-					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Put.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
-				case "DELETE":
-					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Delete.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
-				case "PATCH":
-					mapss = apiSpec.Spec.Paths.Find(pathItem.Path).Patch.RequestBody.Value.Content.Get("application/json").Schema.Value.Properties
-				}
+				properties := operation.RequestBody["content"].(map[string]interface{})["application/json"].(map[string]interface{})["schema"].(map[string]interface{})["properties"].(map[string]interface{})
 
-				for k, v := range mapss {
+				for k, v := range properties {
 					pattern := `\b(?:e[-]?mail|mail)\b`
 					re := regexp.MustCompile(pattern)
 					matches := re.FindAllString(k, -1)
-					switch v.Value.Type.Slice()[0] {
+					vType := v.(map[string]interface{})["type"].(string)
+					switch vType {
 					case "string":
 						if len(matches) > 0 {
 							reqBody[k] = FakeEmail()
 						} else {
 							reqBody[k] = FakeString()
 						}
-					case "int":
+					case "integer":
 						reqBody[k] = FakeInt()
 					}
 				}
 
 				b, _ := json.Marshal(reqBody)
-
 				jsonReader = bytes.NewReader(b)
+				PrintRequestBody(b)
 			}
 
 			req, err := http.NewRequest(strings.ToUpper(operation.Method), apiSpec.BaseURL+pathItem.Path, jsonReader)
 			if err != nil {
-				log.Fatalf("Error making request: %v", err)
+				PrintError(apiSpec.BaseURL+pathItem.Path, operation.Method, fmt.Sprintf("Error making request: %v", err))
+				continue
 			}
 			req.Header.Add("Content-Type", "application/json")
-			fmt.Println("Req ", apiSpec.BaseURL+pathItem.Path)
 
 			if operation.Parameters != nil {
-				fmt.Println("Operations Parameters: ", operation.Parameters)
 				q := req.URL.Query()
 				for _, param := range operation.Parameters {
-					fmt.Println("Param: ", param)
-					// Get Value "in"
 					if inValue, ok := param["in"]; ok {
-						fmt.Println("In: ", inValue)
 						schema := param["schema"].(map[string]interface{})
 						typeValue, _ := schema["type"]
 
-						getValue := func(typeValue interface{}) string {
+						getValue := func(paramName string, typeValue interface{}) string {
+							if paramName == "page" {
+								return "1"
+							}
 							if typeValue == "string" {
 								return FakeString()
 							} else if typeValue == "integer" {
@@ -94,15 +74,13 @@ func MakeRequest(apiSpec *APISpec) {
 							return ""
 						}
 
-						value := getValue(typeValue)
+						value := getValue(param["name"].(string), typeValue)
 						paramName := param["name"].(string)
 
 						switch inValue {
 						case "query":
-							fmt.Println("Value Param: ", value)
 							q.Add(paramName, value)
 						case "header":
-							fmt.Println("Value Header: ", value)
 							req.Header.Add(paramName, value)
 						}
 					}
@@ -110,98 +88,49 @@ func MakeRequest(apiSpec *APISpec) {
 				req.URL.RawQuery = q.Encode()
 			}
 
-			// Print Request
-			requestDump, err := httputil.DumpRequest(req, true)
+			PrintRequest(req)
+
+			// Do Req and Validate Response
+			expectedResponse, err := GetExpectedResponse(operation)
 			if err != nil {
-				log.Fatalf("Error dumping request: %v", err)
+				PrintError(apiSpec.BaseURL+pathItem.Path, operation.Method, fmt.Sprintf("Error getting expected response: %v", err))
+				// Set expectedResponse to nil to indicate that no validation will be done
+				expectedResponse = nil
 			}
-			fmt.Println("MAKE Request: ", string(requestDump))
-			fmt.Println("-------------------------")
 
-			// Do Req
-			request(req)
-
-			fmt.Println()
+			requestAndValidate(req, expectedResponse, apiSpec.BaseURL+pathItem.Path, operation.Method)
 		}
-		fmt.Println()
 	}
 }
 
-func request(req *http.Request) {
+func requestAndValidate(req *http.Request, expectedResp *ExpectedResponse, endpoint, method string) {
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatalf("Error doing request: %v", err)
+		PrintError(endpoint, method, fmt.Sprintf("Error doing request: %v", err))
+		return
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Fatalf("Error closing response body: %v", err)
+			PrintError(endpoint, method, fmt.Sprintf("Error closing response body: %v", err))
 		}
 	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatalf("Error reading body: %v", err)
+		PrintError(endpoint, method, fmt.Sprintf("Error reading body: %v", err))
+		return
 	}
 
-	fmt.Println("Response Status:", resp.Status)
-	fmt.Println("Response Body:", string(body))
-}
+	PrintResponse(resp, body)
 
-// replaceDynamicPlaceholders replaces placeholders enclosed in curly braces with random strings.
-func replaceDynamicPlaceholders(path string) string {
-	re := regexp.MustCompile(`{[^{}]*}`) // Regular expression to find words within curly braces
-	return re.ReplaceAllStringFunc(path, func(match string) string {
-		// Generate a random string of length 10 for each match (this length can be adjusted)
-		return FakeString()
-	})
+	if expectedResp != nil {
+		if err := CompareResponses(resp, expectedResp); err != nil {
+			PrintAssertionResult(err)
+		} else {
+			PrintAssertionResult(nil)
+		}
+	} else {
+		fmt.Println("Assertion Result: ⚠️ No expected response to validate against.")
+	}
 }
-
-// func printParameters(parameters []map[string]interface{}) {
-// 	if len(parameters) > 0 {
-// 		fmt.Println("  Parameters:")
-// 		for i, param := range parameters {
-// 			fmt.Printf("    Parameter %d:\n", i+1)
-// 			printNestedMap(param, 3)
-// 		}
-// 	}
-// }
-//
-// func printRequestBody(requestBody map[string]interface{}) {
-// 	if len(requestBody) > 0 {
-// 		fmt.Println("  Request Body:")
-// 		printNestedMap(requestBody, 2)
-// 	}
-// }
-//
-// func printResponses(responses map[string]map[string]interface{}) {
-// 	if len(responses) > 0 {
-// 		fmt.Println("  Responses:")
-// 		for statusCode, response := range responses {
-// 			fmt.Printf("    Status Code %s:\n", statusCode)
-// 			printNestedMap(response, 3)
-// 		}
-// 	}
-// }
-//
-// func printNestedMap(m map[string]interface{}, indent int) {
-// 	for key, value := range m {
-// 		fmt.Printf("%s%s: ", strings.Repeat("  ", indent), key)
-// 		switch v := value.(type) {
-// 		case map[string]interface{}:
-// 			fmt.Println()
-// 			printNestedMap(v, indent+1)
-// 		case []interface{}:
-// 			fmt.Println()
-// 			for _, item := range v {
-// 				if itemMap, ok := item.(map[string]interface{}); ok {
-// 					printNestedMap(itemMap, indent+1)
-// 				} else {
-// 					fmt.Printf("%s- %v\n", strings.Repeat("  ", indent+1), item)
-// 				}
-// 			}
-// 		default:
-// 			fmt.Printf("%v\n", v)
-// 		}
-// 	}
-// }
