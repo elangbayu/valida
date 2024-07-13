@@ -2,84 +2,61 @@ package apitest
 
 import (
 	"fmt"
-	"os"
-	"sort"
-	"strconv"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
+	"net/http"
+	"net/http/httputil"
 )
 
-func displayResultsAsTable(results []TestResult) {
-	const (
-		green       = lipgloss.Color("#009900")
-		red         = lipgloss.Color("#f61901")
-		mutedGreen  = lipgloss.Color("#729762")
-		brightGreen = lipgloss.Color("#E7F0DC")
-	)
+// PrintEndpointInfo prints the endpoint and method information
+func PrintEndpointInfo(baseURL, path, method string) {
+	fmt.Println("========================================")
+	fmt.Printf("Endpoint: %s\n", baseURL+path)
+	fmt.Printf("Method: %s\n", method)
+	fmt.Println("----------------------------------------")
+}
 
-	re := lipgloss.NewRenderer(os.Stdout)
+// PrintRequestBody prints the request body
+func PrintRequestBody(body []byte) {
+	fmt.Println("Request Body:")
+	fmt.Printf("%s\n", body)
+	fmt.Println("----------------------------------------")
+}
 
-	var (
-		HeaderStyle       = re.NewStyle().Foreground(brightGreen).Bold(true).Align(lipgloss.Center)
-		CellStyle         = re.NewStyle().Padding(0, 1).Width(14)
-		PassedStatusStyle = re.NewStyle().Foreground(green).Width(14)
-		FailedStatusStyle = re.NewStyle().Foreground(red).Width(14)
-		BorderStyle       = lipgloss.NewStyle().Foreground(mutedGreen)
-	)
-
-	// Sort the results
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Endpoint == results[j].Endpoint {
-			return results[i].Method < results[j].Method
-		}
-		return results[i].Endpoint < results[j].Endpoint
-	})
-
-	t := table.New().
-		Border(lipgloss.ThickBorder()).
-		BorderStyle(BorderStyle).
-		Headers("ENDPOINT", "METHOD", "STATUS").
-		StyleFunc(func(row, col int) lipgloss.Style {
-			if row == 0 {
-				return HeaderStyle
-			}
-			if row-1 < len(results) && col == 2 {
-				switch results[row-1].Status {
-				case "PASSED":
-					return PassedStatusStyle
-				case "FAILED":
-					return FailedStatusStyle
-				}
-			}
-			return CellStyle
-		})
-
-	var passedCount, failedCount int
-
-	for _, result := range results {
-		t.Row(result.Endpoint, result.Method, result.Status)
-		if result.Status == "PASSED" {
-			passedCount++
-		} else if result.Status == "FAILED" {
-			failedCount++
-		}
+// PrintRequest prints the request details
+func PrintRequest(req *http.Request) {
+	requestDump, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		fmt.Printf("Error dumping request: %v\n", err)
+		return
 	}
+	fmt.Println("Request:")
+	fmt.Printf("%s\n", string(requestDump))
+	fmt.Println("----------------------------------------")
+}
 
-	fmt.Println(t)
+// PrintResponse prints the response details
+func PrintResponse(resp *http.Response, body []byte) {
+	fmt.Println("Response:")
+	fmt.Printf("Status: %d\n", resp.StatusCode)
+	fmt.Printf("Body: %s\n", string(body))
+	fmt.Println("----------------------------------------")
+}
 
-	passedCountStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color(green)).
-		MarginTop(1).
-		Width(22)
+// PrintAssertionResult prints the result of the assertion
+func PrintAssertionResult(err error) {
+	if err != nil {
+		fmt.Printf("Assertion Result: ❌ Response validation failed: %v\n", err)
+	} else {
+		fmt.Println("Assertion Result: ✔️ Response validation passed!")
+	}
+	fmt.Println("========================================\n")
+}
 
-	failedCountStyle := lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color(red)).
-		MarginTop(1).
-		Width(22)
-
-	fmt.Println(passedCountStyle.Render("PASSED: " + strconv.Itoa(passedCount)))
-	fmt.Println(failedCountStyle.Render("FAILED: " + strconv.Itoa(failedCount)))
+// PrintError prints the error for a specific endpoint and method
+func PrintError(endpoint, method, errorMessage string) {
+	fmt.Println("========================================")
+	fmt.Printf("Endpoint: %s\n", endpoint)
+	fmt.Printf("Method: %s\n", method)
+	fmt.Println("Error:")
+	fmt.Printf("%s\n", errorMessage)
+	fmt.Println("========================================\n")
 }
