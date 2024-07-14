@@ -27,4 +27,3 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GORELEASER_GH_TOKEN }}
-          PRIVATE_KEY_ELANG: ${{ secrets.PRIVATE_KEY_ELANG }}
