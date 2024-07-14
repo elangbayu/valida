@@ -59,4 +59,23 @@ brews:
         # The Git URL to push.
         #
         # Templates: allowed.
-        url: "https://github.com/valida-team/homebrew-valida.git"
+        url: "ssh://git@github.com:valida-team/homebrew-valida.git"
+
+        # The SSH private key that should be used to commit to the Git
+        # repository.
+        # This can either be a path or the key contents.
+        #
+        # IMPORTANT: the key must not be password-protected.
+        #
+        # WARNING: do not expose your private key in the configuration file!
+        #
+        # Templates: allowed.
+        private_key: "{{ .Env.PRIVATE_KEY_ELANG }}"
+
+        # The value to be passed to `GIT_SSH_COMMAND`.
+        # This is mainly used to specify the SSH private key used to pull/push
+        # to the Git URL.
+        #
+        # Default: 'ssh -i {{ .KeyPath }} -o StrictHostKeyChecking=accept-new -F /dev/null'.
+        # Templates: allowed.
+        ssh_command: "ssh -i {{ .Env.PRIVATE_KEY_ELANG }} -o StrictHostKeyChecking=accept-new -F /dev/null"
