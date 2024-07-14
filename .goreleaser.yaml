@@ -18,7 +18,7 @@ brews:
     #
     # Default depends on the client.
     # Templates: allowed.
-    url_template: "https://github.com/valida-team/homebrew-valida/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    url_template: "https://github.com/valida-team/valida/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
 
     # The project name and current git tag are used in the format string.
     #
@@ -31,7 +31,7 @@ brews:
     # Your app's homepage.
     #
     # Default: inferred from global metadata.
-    homepage: "https://github.com/valida-team/homebrew-valida"
+    homepage: "https://github.com/valida-team/valida"
 
     # Your app's description.
     #
