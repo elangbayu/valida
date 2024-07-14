@@ -76,4 +76,4 @@ brews:
         # WARNING: do not expose your private key in the configuration file!
         #
         # Templates: allowed.
-        private_key: "{{ .Env.PRIVATE_KEY_PATH }}"
+        private_key: "{{ .Env.PRIVATE_KEY_ELANG }}"
