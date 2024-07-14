@@ -9,8 +9,7 @@ builds:
       - amd64
       - arm64
 brews:
-  -
-    # NOTE: make sure the url_template, the token and given repo (github or
+  - # NOTE: make sure the url_template, the token and given repo (github or
     # gitlab) owner and name are from the same kind.
     # We will probably unify this in the next major version like it is
     # done with scoop.
@@ -45,15 +44,36 @@ brews:
       # Repository owner.
       #
       # Templates: allowed.
-      owner: elangbayu
+      owner: valida-team
 
       # Repository name.
       #
       # Templates: allowed.
-      name: valida
+      name: homebrew-valida
 
-      # Optionally a branch can be provided.
+      # Optionally a token can be provided, if it differs from the token
+      # provided to GoReleaser
       #
-      # Default: default repository branch.
       # Templates: allowed.
-      branch: main
+      token: "{{ .Env.GORELEASER_GH_TOKEN }}"
+
+      # Clone, create the file, commit and push, to a regular Git repository.
+      #
+      # Notice that this will only have any effect if the given URL is not
+      # empty.
+      git:
+        # The Git URL to push.
+        #
+        # Templates: allowed.
+        url: "ssh://git@github.com:valida-team/homebrew-valida.git"
+
+        # The SSH private key that should be used to commit to the Git
+        # repository.
+        # This can either be a path or the key contents.
+        #
+        # IMPORTANT: the key must not be password-protected.
+        #
+        # WARNING: do not expose your private key in the configuration file!
+        #
+        # Templates: allowed.
+        private_key: "{{ .Env.PRIVATE_KEY_PATH }}"
