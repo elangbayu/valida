@@ -4,13 +4,13 @@ go 1.22.0
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.0.4
+	github.com/charmbracelet/lipgloss v0.12.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.19.0
 )
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/charmbracelet/lipgloss v0.12.1 // indirect
 	github.com/charmbracelet/x/ansi v0.1.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-openapi/jsonpointer v0.20.2 // indirect
