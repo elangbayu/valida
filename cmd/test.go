@@ -17,6 +17,16 @@ var testCmd = &cobra.Command{
 	Short: "Test the given OpenAPI Spec file",
 	Long:  `Test the given OpenAPI Spec file`,
 	Run: func(cmd *cobra.Command, args []string) {
+		//if err := apitest.InitLogger(); err != nil {
+		//	log.Fatal(err)
+		//}
+		//defer func() {
+		//	err := apitest.CloseLogger()
+		//	if err != nil {
+		//		log.Fatal(err)
+		//	}
+		//}()
+
 		file := viper.GetString("file")
 		ext := filepath.Ext(file)
 		if ext != ".json" && ext != ".yaml" && ext != ".yml" {
@@ -29,7 +39,6 @@ var testCmd = &cobra.Command{
 		}
 
 		apitest.MakeRequest(apiSpec)
-		// apitest.PrintAPISpec(apiSpec)
 	},
 }
 
