@@ -9,9 +9,11 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 }
 
+var version = "dev"
+
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of Valida",
+	Short: "Print the version of Valida",
 	Long:  `All software has versions. This is Valida's`,
 	Run: func(cmd *cobra.Command, args []string) {
 		printVersion()
@@ -19,5 +21,5 @@ var versionCmd = &cobra.Command{
 }
 
 func printVersion() {
-	fmt.Println("Valida Automatic Test Execution - v1")
+	fmt.Printf("Valida %s\n", version)
 }

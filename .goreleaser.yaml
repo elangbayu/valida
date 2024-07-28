@@ -8,6 +8,8 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -X 'github.com/valida-team/valida/cmd.version={{.Version}}'
 brews:
   - # NOTE: make sure the url_template, the token and given repo (github or
     # gitlab) owner and name are from the same kind.
