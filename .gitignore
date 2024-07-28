@@ -24,3 +24,6 @@ go.work
 
 .idea/
 ./dist
+.DS_Store
+test_log*
+valida
